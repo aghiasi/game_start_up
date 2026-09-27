@@ -21,17 +21,27 @@ class Game
   float enemySpawnTimer;
   float enemySpawnTimerMax;
   int maxEnemies;
-  int points;
+  unsigned int points;
+  bool mouseHeld;
+  bool mousePerssed;
+  bool endGame;
   float move = 10.f;
+  unsigned int health;
+  sf::Font font;
+  sf::Text uiText;
   void processEvents();
   void update();
   void render();
   void initVariables();
   void initWindow(unsigned int, unsigned int, std::string);
   void initEnemy();
+  void initFont();
+  void initText();
+  void updateText();
   void updateMousePosition();
   void spawnEnemy();
   void renderEnemy();
+  void renderText();
   void updateEnemy();
 
 public:

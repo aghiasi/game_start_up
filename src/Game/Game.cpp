@@ -1,11 +1,14 @@
 #include <iostream>
 #include "Game.hpp"
 #include <string.h>
-Game::Game(unsigned int x, unsigned int y, std::string str)
+#include <sstream>
+Game::Game(unsigned int x, unsigned int y, std::string str) : uiText(this->font)
 {
   this->initVariables();
   this->initWindow(x, y, str);
   this->initEnemy();
+  this->initFont();
+  this->initText();
 }
 Game::~Game()
 {
@@ -18,10 +21,20 @@ void Game::initVariables()
   this->enemySpawnTimer = 0.f;
   this->enemySpawnTimerMax = 3000.f;
   this->maxEnemies = 5;
+  this->mouseHeld = false;
+  this->mousePerssed = false;
+  this->health = 3;
+  this->endGame = false;
 }
 void Game::initWindow(unsigned int x, unsigned int y, std::string str)
 {
   this->window = new sf::RenderWindow(sf::VideoMode({x, y}), str, sf::Style::Titlebar | sf::Style::Close);
+}
+void Game::initText()
+{
+  this->uiText.setCharacterSize(12);
+  this->uiText.setFillColor(sf::Color::White);
+  this->uiText.setString("NONE");
 }
 void Game::initEnemy()
 {
@@ -31,9 +44,14 @@ void Game::initEnemy()
   this->enemy.setOutlineColor(sf::Color::Green);
   this->enemy.setOutlineThickness(1.f);
 }
+void Game::initFont()
+{
+  if (!this->font.openFromFile("public/OpenSans-VariableFont_wdth,wght.ttf"))
+    std::cout << "faild to load font \n";
+}
 void Game::run()
 {
-  while (window->isOpen())
+  while (window->isOpen() && !endGame)
   {
     this->processEvents();
     this->update();
@@ -44,6 +62,7 @@ void Game::processEvents()
 {
   while (const auto event = window->pollEvent())
   {
+    this->mousePerssed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
     if (event->is<sf::Event::Closed>())
       this->window->close();
     if (const auto *key = event->getIf<sf::Event::KeyPressed>())
@@ -59,10 +78,23 @@ void Game::processEvents()
       }
   }
 }
+void Game::updateText()
+{
+  std::stringstream ss;
+  ss << "Points : " << this->points << '\n'
+     << "Health : " << this->health;
+  this->uiText.setString(ss.str());
+}
 void Game::update()
 {
-  this->updateMousePosition();
-  this->updateEnemy();
+  if (!endGame)
+  {
+    this->updateMousePosition();
+    this->updateText();
+    this->updateEnemy();
+  }
+  if (this->health <= 0)
+    this->endGame = true;
 }
 void Game::updateEnemy()
 {
@@ -76,22 +108,31 @@ void Game::updateEnemy()
     else
       this->enemySpawnTimer += 1.f;
   }
+  bool deleted = false;
   for (int i = 0; i < this->enemeis.size(); i++)
   {
-    bool del = false;
     this->enemeis[i].move(sf::Vector2f(0.f, 0.09f));
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+    if (this->mousePerssed && !this->mouseHeld)
+    {
+      this->mouseHeld = true;
       if (this->enemeis[i].getGlobalBounds().contains(this->mouseView))
       {
-        this->enemeis[i].setFillColor(sf::Color::Green);
+        this->enemeis.erase(this->enemeis.begin() + i);
+        this->points++;
+        i--;
+        continue;
       }
+    }
     if (this->enemeis[i].getPosition().y >= this->window->getSize().y)
     {
       std::cout << "in the delete enemy \n";
       this->enemeis.erase(this->enemeis.begin() + i);
+      this->health--;
       i--;
       continue;
     }
+    if (!mousePerssed)
+      mouseHeld = false;
   }
 }
 void Game::spawnEnemy()
@@ -108,10 +149,15 @@ void Game::renderEnemy()
     this->window->draw(e);
   }
 }
+void Game::renderText()
+{
+  this->window->draw(this->uiText);
+}
 void Game::render()
 {
   window->clear();
   this->renderEnemy();
+  this->renderText();
   window->display();
 }
 void Game::updateMousePosition()
